@@ -7,14 +7,14 @@ function [activityICG,outPairID] =  ICG(allData)
 
 %Ouput:
 
-%activityICG - ICG activity for level k
+%activityICG - ICG activity for level l
 %outPairID - the ids of original neurons grouped at each level
 
 %Brandon Munn, 19/10/21 
 
 
 %%
-%calc how many rng iterations I can do 
+%Calculate how many ICG iterations are possible
 ICGsteps = nextpow2(size(allData,1));
 
 %Catch case if more neurons than a power of 2
