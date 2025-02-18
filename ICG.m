@@ -35,7 +35,7 @@ clearvars allData
 
 
 for ICGlevel = 2:ICGsteps
-    ICGlevel
+    fprintf('=== ICG level is %2i out of %2i ===\n', ICGlevel, ICGsteps); 
     
     %Grab data
     ICGAct = activityICG{ICGlevel-1};
@@ -45,7 +45,7 @@ for ICGlevel = 2:ICGsteps
     %Calculate correlation matrix
     tic
     rho = corr(ICGAct');
-    toc
+    fprintf('Correlation computation : %f seconds\n', toc);
     
     C = triu(rho,1);
     clearvars rho
@@ -92,8 +92,8 @@ for ICGlevel = 2:ICGsteps
          
         %Text counter
         if ~mod(numPairCnt,250)
-            [numPairCnt numPairsTotal toc]
-            100*numPairCnt/numPairsTotal
+            fprintf('%6i pairs out of %6i completed (%3i %%) in %f seconds\n', ...
+                numPairCnt, numPairsTotal, round(100*numPairCnt/numPairsTotal), toc);
 
         end
         
@@ -130,7 +130,7 @@ for ICGlevel = 2:ICGsteps
     
         
     end
-    toc
+    fprintf('ICG level %2i completed in %f seconds\n\n', ICGlevel, toc); 
     
     
     %Save all the activity
