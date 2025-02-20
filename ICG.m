@@ -1,4 +1,4 @@
-function [activityICG,outPairID] = ICG(allData)
+function [activityICG,outPairID] = ICG(allData, keepAll)
 
 %%
 %Input
@@ -15,7 +15,8 @@ function [activityICG,outPairID] = ICG(allData)
 
 %% Prelims (ICG level 1 is just the original data)
 %Calculate how many ICG iterations are possible
-ICGsteps = nextpow2(size(allData,1)+0.5); % Catch case if more neurons than a power of 2
+nNeurons = size(allData,1);
+ICGsteps = nextpow2(nNeurons+0.5-keepAll)+keepAll; % Catch case if neurons = a power of 2
 
 %The first level is the cellular activity
 activityICG = cell(1,ICGsteps);
@@ -23,7 +24,7 @@ activityICG{1} = allData;
 
 %Cell ids correspond to order inputted
 outPairID = cell(1,ICGsteps);
-outPairID{1} = (1:size(allData,1))';
+outPairID{1} = (1:nNeurons)';
 
 clearvars allData
 
@@ -38,7 +39,8 @@ for ICGlevel = 2:ICGsteps
     nData = size(ICGAct,1);
 
     %How many pairs can be made
-    numPairsTotal = floor(nData/2);
+    numPairsOdd = mod(nData, 2);
+    numPairsTotal = floor(nData/2) + (keepAll && numPairsOdd);
 
     % I also know the size of my output data = half data by time
     outdat = nan(numPairsTotal,size(ICGAct,2));
@@ -77,9 +79,10 @@ for ICGlevel = 2:ICGsteps
 
     %% Match the neurons (greedily)
     gdIndex = true(numel(invCI),1);
+    pairUsed = false(size(outPairID{ICGlevel-1},1),1); 
 
     tic
-    for numPairCnt = 1:numPairsTotal
+    for numPairCnt = 1:floor(nData/2)
 
         %Text counter
         % if ~mod(numPairCnt,250)
@@ -96,6 +99,8 @@ for ICGlevel = 2:ICGsteps
         rowNew = allRowIndx(sCI(k));
         %top col index
         colNew = allColIndx(sCI(k));
+        
+        pairUsed([rowNew, colNew]) = true; 
 
         %ICG process
         % Save data
@@ -110,6 +115,14 @@ for ICGlevel = 2:ICGsteps
         gdIndex(idx) = false; 
 
     end
+
+    if keepAll && numPairsOdd
+        missingEdge = find(~pairUsed);
+        rowNew = missingEdge; colNew = missingEdge; 
+        outdat(end,:) = ICGAct(rowNew,:) + ICGAct(colNew,:);
+        outPairID{ICGlevel}(end,1:end/2) = reshape(outPairID{ICGlevel-1}(rowNew,:), 1, []);
+    end
+
     fprintf('Time taken to pair edges: %f seconds\n\n', toc);
 
 
