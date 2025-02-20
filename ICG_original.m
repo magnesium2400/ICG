@@ -90,7 +90,7 @@ for ICGlevel = 2:ICGsteps
         outdat(numPairCnt,:) = ICGAct(rowNew,:) + ICGAct(colNew,:);
 
         %Update the list of original pairs
-        outPairID{ICGlevel}(numPairCnt,:) = reshape(outPairID{ICGlevel-1}([rowNew colNew],:), 1, []);
+        outPairID{ICGlevel}(numPairCnt,:) = reshape(outPairID{ICGlevel-1}([rowNew colNew],:)', 1, []);
 
         %Update list of available neurons to pair (optimised)
         gdIndex = allRowIndx ~= rowNew & allRowIndx ~= colNew & allColIndx ~= colNew & allColIndx ~= rowNew & gdIndex;
