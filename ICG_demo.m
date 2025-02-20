@@ -3,10 +3,10 @@
 [v,f] = read_vtk(fullfile(fileparts(which('ICG')), '..','..', 'DATA','D_HumanStandardSurface','fsaverage5_10k_midthickness-lh.vtk'));
 v = v'; f = f';
 
-% m = readmatrix(fullfile(fileparts(which('ICG')), '..','..', 'DATA','D_HumanStandardSurface','fsaverage5_10k_cortex-lh_mask.txt'));
-% [v,f,~,m] = trimExcludedRois(v, f, m);
+m = readmatrix(fullfile(fileparts(which('ICG')), '..','..', 'DATA','D_HumanStandardSurface','fsaverage5_10k_cortex-lh_mask.txt'));
+[v,f,~,m] = trimExcludedRois(v, f, m);
 
-[~,f,v] = decreaseRegularPatch(f,2,[],v);
+% [~,f,v] = decreaseRegularPatch(f,2,[],v);
 
 s = calc_geometric_eigenmode(struct('vertices', v, 'faces', f), 100);
 
