@@ -1,9 +1,9 @@
 %%% Shared variables
 
-[v,f] = read_vtk(fullfile(fileparts(which('ICG')), '..','..', 'DATA','D_HumanStandardSurface','fsaverage5_10k_midthickness-lh.vtk'));
-v = v'; f = f';
+g = gifti(fetch_atlas('fsaverage', '10k', 'L', 'pial')); 
+v = g.vertices; f = g.faces; 
 
-m = readmatrix(fullfile(fileparts(which('ICG')), '..','..', 'DATA','D_HumanStandardSurface','fsaverage5_10k_cortex-lh_mask.txt'));
+m = gifti(fetch_atlas('fsaverage', '10k', 'L', '', 'desc', 'nomedialwall')).cdata; 
 [v,f,~,m] = trimExcludedRois(v, f, m);
 
 % [~,f,v] = decreaseRegularPatch(f,2,[],v);
@@ -12,8 +12,12 @@ s = calc_geometric_eigenmode(struct('vertices', v, 'faces', f), 100);
 
 
 %% Run ICG
+
+correlationFunction = @(x) x * diag(s.evals) * x';
+% combinationFunction = @(x,y) x + y;
+
 t1 = tic; 
-[~,outPairID] = ICG(s.evecs,1);
+[~,outPairID] = ICG(s.evecs, 'keepAll', true, 'correlationFunction', correlationFunction);
 fprintf('Time for 1st run is %f seconds\n\n', toc(t1)); 
 
 % t1 = tic; 
@@ -39,8 +43,8 @@ for ii = find(cellfun(@height, outPairID) < 500)
     rois(r(~isnan(r))) = x(~isnan(r));
 
     ax = nexttile;
-    plotBrain(s.vertices, s.faces, rois, rois, 'BoundaryMethod', 'faces');
-    colormap( ax, lines(range(rois)+1) );
+    plotBrain(s.vertices, s.faces, rois, rois, 'BoundaryMethod', 'faces', 'BoundaryColor', [1 1 1]);
+    colormap( ax, distinguishable_colors(range(rois)+1) );
     title(ax, sprintf('%i parcels', height(r)))
 
 end

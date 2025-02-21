@@ -1,21 +1,20 @@
-function [activityICG,outPairID] = ICG(allData, keepAll)
+function [activityICG, outPairID] = ICG(allData, varargin)
 
-%%
-%Input
+%% Input Parsing
+p = inputParser;
+addRequired(p, 'allData', @isnumeric);
+addParameter(p, 'keepAll', false, @(x) isnumeric(x) || islogical(x));
+addParameter(p, 'correlationFunction', @(x) corr(x'), @(x) isa(x, 'function_handle'));
+addParameter(p, 'combinationFunction', @plus, @(x) isa(x, 'function_handle'));
+parse(p, allData, varargin{:});
 
-%allData -  neuronal timeseries data comes in rows - neurons/ cols - time
-
-%Ouput:
-
-%activityICG - ICG activity for level l
-%outPairID - the ids of original neurons grouped at each level
-
-%Brandon Munn, 19/10/21
+allData = p.Results.allData;
+keepAll = p.Results.keepAll;
+correlationFunction = p.Results.correlationFunction;
+combinationFunction = p.Results.combinationFunction;
 
 
 %% Prelims (ICG level 1 is just the original data)
-if nargin < 2 || ismepty(keepAll); keepAll = false; end
-
 %Calculate how many ICG iterations are possible
 nNeurons = size(allData,1);
 ICGsteps = nextpow2(nNeurons+0.5-keepAll)+keepAll; % Catch case if neurons = a power of 2
@@ -33,7 +32,7 @@ clearvars allData
 
 %% Start the ICG process
 for ICGlevel = 2:ICGsteps
-    fprintf('=== ICG level is %2i out of %2i ===\n', ICGlevel, ICGsteps);
+    fprintf('========= ICG level %2i out of %2i =========\n', ICGlevel, ICGsteps);
 
     %% Setup for current iteration
     %Grab data
@@ -54,7 +53,7 @@ for ICGlevel = 2:ICGsteps
     %% Get (sorted) correlations between neurons
     %Calculate correlation matrix
     tic
-    rho = corr(ICGAct');
+    rho = correlationFunction(ICGAct);
     fprintf('Correlation computation : %f seconds\n', toc);
 
     %Sort edges in this correlation matrix - keep track of the edge order
@@ -87,11 +86,11 @@ for ICGlevel = 2:ICGsteps
     for numPairCnt = 1:floor(nData/2)
 
         %Text counter
-        % if ~mod(numPairCnt,250)
-        %     fprintf('%6i pairs out of %6i completed (%2i%%) in %f seconds\n', ...
-        %         numPairCnt, numPairsTotal, fix(100*numPairCnt/numPairsTotal), toc);
-        %
-        % end
+        if ~mod(numPairCnt,250)
+            fprintf('%6i pairs out of %6i completed (%2i%%) in %f seconds\n', ...
+                numPairCnt, numPairsTotal, fix(100*numPairCnt/numPairsTotal), toc);
+
+        end
 
         %Find the next pairing (greedily)
         k = find(gdIndex,1,'first');
@@ -106,7 +105,7 @@ for ICGlevel = 2:ICGsteps
 
         %ICG process
         % Save data
-        outdat(numPairCnt,:) = ICGAct(rowNew,:) + ICGAct(colNew,:);
+        outdat(numPairCnt,:) = combinationFunction(ICGAct(rowNew,:), ICGAct(colNew,:));
 
         %Update the list of original pairs
         outPairID{ICGlevel}(numPairCnt,:) = reshape(outPairID{ICGlevel-1}([rowNew colNew],:)', 1, []);
