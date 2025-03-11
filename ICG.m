@@ -61,7 +61,7 @@ for ICGlevel = 2:ICGsteps
     tic
     upTriMask = triu(true(nData),1);
     [~,sCI] = sort(rho(upTriMask),'descend');
-    invCI(sCI) = 1:numel(sCI); %ok<AGROW>
+    invCI(sCI) = 1:numel(sCI); %#ok<AGROW>
     [allCIndx, allRIndx] = meshgrid(1:nData);
     allColIndx = allCIndx(upTriMask); % allColIndx = @(x) ceil(sqrt(2*x+0.25)+1/2);
     allRowIndx = allRIndx(upTriMask); % allRowIndx = @(x) x - 0.5*(allColIndx(x)-1)*(allColIndx(x)-2);
