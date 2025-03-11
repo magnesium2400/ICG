@@ -1,12 +1,13 @@
 %%% Shared variables
 
-g = gifti(fetch_atlas('fsaverage', '10k', 'L', 'pial')); 
+%loadenv('.env'); 
+g = gifti(fetch_atlas('fsaverage', '41k', 'L', 'pial')); 
 v = g.vertices; f = g.faces; 
+m = gifti(fetch_atlas('fsaverage', '41k', 'L', '', 'desc', 'nomedialwall')).cdata; 
 
-m = gifti(fetch_atlas('fsaverage', '10k', 'L', '', 'desc', 'nomedialwall')).cdata; 
-[v,f,~,m] = trimExcludedRois(v, f, m);
-
-% [~,f,v] = decreaseRegularPatch(f,2,[],v);
+% [v,f,~,m] = trimExcludedRois(v, f, m);
+[dsm,f,v] = decreaseRegularPatch(f,2,[],v);
+[v,f,~,m] = trimExcludedRois(v, f, m(dsm));
 
 s = calc_geometric_eigenmode(struct('vertices', v, 'faces', f), 100);
 
@@ -43,8 +44,8 @@ for ii = find(cellfun(@height, outPairID) < 500)
     rois(r(~isnan(r))) = x(~isnan(r));
 
     ax = nexttile;
-    plotBrain(s.vertices, s.faces, rois, rois, 'BoundaryMethod', 'faces', 'BoundaryColor', [1 1 1]);
-    colormap( ax, distinguishable_colors(range(rois)+1) );
+    plotBrain(s.vertices, s.faces, rois, rois, 'BoundaryMethod', 'faces', 'BoundaryColor', [0 0 0]);
+    colormap( ax, 1-distinguishable_colors(range(rois)+1) );
     title(ax, sprintf('%i parcels', height(r)))
 
 end

@@ -4,8 +4,8 @@ function [activityICG, outPairID] = ICG(allData, varargin)
 p = inputParser;
 addRequired(p, 'allData', @isnumeric);
 addParameter(p, 'keepAll', false, @(x) isnumeric(x) || islogical(x));
-addParameter(p, 'correlationFunction', @(x) corr(x'), @(x) isa(x, 'function_handle'));
-addParameter(p, 'combinationFunction', @plus, @(x) isa(x, 'function_handle'));
+addParameter(p, 'correlationFunction', @(X) corr(X'), @(x) isa(x, 'function_handle'));
+addParameter(p, 'combinationFunction', @(x,y) plus(x,y)/2, @(x) isa(x, 'function_handle'));
 parse(p, allData, varargin{:});
 
 allData = p.Results.allData;
@@ -15,15 +15,15 @@ combinationFunction = p.Results.combinationFunction;
 
 
 %% Prelims (ICG level 1 is just the original data)
-%Calculate how many ICG iterations are possible
+% Calculate how many ICG iterations are possible
 nNeurons = size(allData,1);
 ICGsteps = nextpow2(nNeurons+0.5-keepAll)+keepAll; % Catch case if neurons = a power of 2
 
-%The first level is the cellular activity
+% The first level is the cellular activity
 activityICG = cell(1,ICGsteps);
 activityICG{1} = allData;
 
-%Cell ids correspond to order inputted
+% Cell ids correspond to order inputted
 outPairID = cell(1,ICGsteps);
 outPairID{1} = (1:nNeurons)';
 
@@ -35,45 +35,37 @@ for ICGlevel = 2:ICGsteps
     fprintf('========= ICG level %2i out of %2i =========\n', ICGlevel, ICGsteps);
 
     %% Setup for current iteration
-    %Grab data
+    % Grab data
     ICGAct = activityICG{ICGlevel-1};
     nData = size(ICGAct,1);
 
-    %How many pairs can be made
+    % How many pairs can be made
     numPairsOdd = mod(nData, 2);
     numPairsTotal = floor(nData/2) + (keepAll && numPairsOdd);
 
-    % I also know the size of my output data = half data by time
+    % I also know the size of my output data = half data x time
     outdat = nan(numPairsTotal,size(ICGAct,2));
 
-    %this is 2 times number of pairings before
+    % This is 2 times number of pairings before
     outPairID{ICGlevel} = nan(numPairsTotal,2^(ICGlevel-1));
 
 
     %% Get (sorted) correlations between neurons
-    %Calculate correlation matrix
+    % Calculate correlation matrix
     tic
     rho = correlationFunction(ICGAct);
     fprintf('Correlation computation : %f seconds\n', toc);
+    assert(all( size(rho)==nData  ))
 
-    %Sort edges in this correlation matrix - keep track of the edge order
+    % Sort edges in this correlation matrix - keep track of the edge order
     tic
     upTriMask = triu(true(nData),1);
     [~,sCI] = sort(rho(upTriMask),'descend');
-    invCI(sCI) = 1:numel(sCI); %#ok<AGROW>
+    invCI(sCI) = 1:numel(sCI); %ok<AGROW>
     [allCIndx, allRIndx] = meshgrid(1:nData);
     allColIndx = allCIndx(upTriMask); % allColIndx = @(x) ceil(sqrt(2*x+0.25)+1/2);
     allRowIndx = allRIndx(upTriMask); % allRowIndx = @(x) x - 0.5*(allColIndx(x)-1)*(allColIndx(x)-2);
     fprintf('Time taken to sort edges: %f seconds\n', toc);
-
-    % tic
-    % upTriMask = triu(true(nData),1);
-    % [~,sCI] = sort(rho(upTriMask),'descend');
-    % invCI = invsort(sCI);
-    % [allCIndx, allRIndx] = meshgrid(1:nData);
-    % allRIndx    = allRIndx(upTriMask);  allCIndx    = allCIndx(upTriMask);
-    % allRowIndx  = allRIndx(sCI);        allColIndx  = allCIndx(sCI);
-    % fprintf('Time taken to sort edges: %f seconds\n', toc);
 
     clearvars  allRIndx allCIndx upTriMask rho
 
@@ -85,32 +77,32 @@ for ICGlevel = 2:ICGsteps
     tic
     for numPairCnt = 1:floor(nData/2)
 
-        %Text counter
+        % Text counter
         if ~mod(numPairCnt,250)
             fprintf('%6i pairs out of %6i completed (%2i%%) in %f seconds\n', ...
                 numPairCnt, numPairsTotal, fix(100*numPairCnt/numPairsTotal), toc);
 
         end
 
-        %Find the next pairing (greedily)
+        % Find the next pairing (greedily)
         k = find(gdIndex,1,'first');
 
-        %Grabbing data
-        %top row index
+        % Grabbing data
+        % top row index
         rowNew = allRowIndx(sCI(k));
-        %top col index
+        % top col index
         colNew = allColIndx(sCI(k));
 
         pairUsed([rowNew, colNew]) = true;
 
-        %ICG process
+        % ICG process
         % Save data
         outdat(numPairCnt,:) = combinationFunction(ICGAct(rowNew,:), ICGAct(colNew,:));
 
-        %Update the list of original pairs
+        % Update the list of original pairs
         outPairID{ICGlevel}(numPairCnt,:) = reshape(outPairID{ICGlevel-1}([rowNew colNew],:)', 1, []);
 
-        %Update list of available neurons to pair (optimised)
+        % Update list of available neurons to pair (optimised)
         % gdIndex = allRowIndx ~= rowNew & allRowIndx ~= colNew & allColIndx ~= colNew & allColIndx ~= rowNew & gdIndex;
         idx = getIdxToChange(nData , rowNew , colNew , invCI);
         gdIndex(idx) = false;
@@ -120,14 +112,14 @@ for ICGlevel = 2:ICGsteps
     if keepAll && numPairsOdd
         missingEdge = find(~pairUsed);
         rowNew = missingEdge; colNew = missingEdge;
-        outdat(end,:) = ICGAct(rowNew,:) + ICGAct(colNew,:);
+        outdat(end,:) = combinationFunction(ICGAct(rowNew,:), ICGAct(colNew,:));
         outPairID{ICGlevel}(end,1:end/2) = reshape(outPairID{ICGlevel-1}(rowNew,:), 1, []);
     end
 
     fprintf('Time taken to pair edges: %f seconds\n\n', toc);
 
 
-    %Save all the activity
+    % Save all the activity
     activityICG{ICGlevel} = outdat;
     clearvars outdat invCI allRowIndx allColIndx
 
