@@ -5,7 +5,7 @@ p = inputParser;
 addRequired(p, 'allData', @isnumeric);
 addParameter(p, 'keepAll', false, @(x) isnumeric(x) || islogical(x));
 addParameter(p, 'correlationFunction', @(X) corr(X'), @(x) isa(x, 'function_handle'));
-addParameter(p, 'combinationFunction', @(x,y) plus(x,y)/2, @(x) isa(x, 'function_handle'));
+addParameter(p, 'combinationFunction', @(x,y) plus(x,y), @(x) isa(x, 'function_handle'));
 parse(p, allData, varargin{:});
 
 allData = p.Results.allData;
@@ -136,7 +136,7 @@ function idx = getIdxToChange(nData, rowNew, colNew, invCI)
 %
 % we know the locations of the values to be removed in allRowIdx and allColIdx
 % given how structured they are: don't have search for where they are -->
-% instead we can directly compute their locations
+% instead we can directly compute their locations (into a,b,c,d)
 
 trin = @(x) (x .* (x-1))/2;  % triangular number
 
